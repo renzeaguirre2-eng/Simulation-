@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DOS ELITE BANK | PRO</title>
+    <style>
+        :root { --accent: #27ae60; --dark: #0a0a0a; --gray: #1c1c1e; --text: #ffffff; }
+        body { font-family: 'Inter', sans-serif; background: var(--dark); color: var(--text); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
+        
+        .bank-vault { width: 100%; max-width: 420px; background: var(--gray); padding: 40px; border-radius: 32px; box-shadow: 0 30px 60px rgba(0,0,0,0.5); }
+        
+        h1 { font-size: 1.2rem; font-weight: 800; letter-spacing: 4px; text-transform: uppercase; color: var(--accent); text-align: center; margin-bottom: 40px; }
+        .label { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; color: #666; letter-spacing: 1px; margin-bottom: 8px; display: block; }
+        
+        input { width: 100%; background: #000; border: 1px solid #333; padding: 16px; border-radius: 12px; color: #fff; font-size: 1rem; margin-bottom: 20px; box-sizing: border-box; }
+        input:focus { border-color: var(--accent); outline: none; }
+        
+        button { width: 100%; padding: 18px; border-radius: 12px; border: none; font-weight: 800; font-size: 0.85rem; text-transform: uppercase; cursor: pointer; transition: 0.2s; background: var(--accent); color: #000; }
+        button:hover { filter: brightness(1.1); transform: translateY(-1px); }
+        .btn-sec { background: transparent; border: 1px solid #333; color: #fff; margin-top: 10px; }
+
+        /* Dashboard */
+        .balance-display { text-align: center; margin-bottom: 30px; }
+        .amount { font-size: 3.5rem; font-weight: 900; letter-spacing: -2px; }
+        
+        /* Transaction History */
+        .history-container { margin-top: 30px; border-top: 1px solid #333; padding-top: 20px; }
+        .history-list { max-height: 180px; overflow-y: auto; margin-top: 15px; }
+        .tx-card { background: #000; padding: 12px; border-radius: 10px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; border-left: 3px solid #333; }
+        .tx-in { border-left-color: var(--accent); }
+        .tx-out { border-left-color: #e74c3c; }
+        .tx-date { color: #555; font-size: 0.7rem; }
+
+        .ai-status { background: #000; border-radius: 16px; padding: 15px; margin-top: 20px; border: 1px solid #222; }
+        .ai-title { font-size: 0.6rem; font-weight: 900; color: var(--accent); text-transform: uppercase; margin-bottom: 5px; }
+        .ai-msg { font-size: 0.8rem; color: #888; }
+
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="bank-vault">
+    <h1>Dos Elite Bank</h1>
+
+    <div id="p1">
+        <span class="label">Full Legal Name</span>
+        <input type="text" id="reg_name" placeholder="EX:Juan Dela Cruz">
+        <span class="label">Monthly Salary (PHP)</span>
+        <input type="number" id="reg_sal" placeholder="0.00">
+        <button onclick="nav(2)">Continue to Security</button>
+    </div>
+
+    <div id="p2" class="hidden">
+        <span class="label">Set 6-Digit PIN (Numeric)</span>
+        <input type="password" id="reg_pin" inputmode="numeric" maxlength="6" placeholder="••••••">
+        <div style="background:#000; padding: 20px; border-radius: 12px; text-align: center; margin-bottom: 20px;">
+            <span class="label">Security AI OTP</span>
+            <div id="otp_code" style="font-size: 2rem; font-weight: 900; color: var(--accent); letter-spacing: 10px;">0000</div>
+        </div>
+        <input type="text" id="otp_input" inputmode="numeric" maxlength="4" placeholder="Enter OTP">
+        <button onclick="finalize()">Verify & Open Vault</button>
+    </div>
+
+    <div id="p3" class="hidden">
+        <span class="label">Holder Name</span>
+        <input type="text" id="log_name">
+        <span class="label">Secret PIN</span>
+        <input type="password" id="log_pin" inputmode="numeric" maxlength="6">
+        <button onclick="login()">Access Account</button>
+    </div>
+
+    <div id="p4" class="hidden">
+        <div class="balance-display">
+            <span class="label">Available PHP</span><br>
+            <span class="amount">₱<span id="val_bal">0.00</span></span>
+        </div>
+        
+        <input type="number" id="tx_amt" placeholder="Enter Amount">
+        <div style="display: flex; gap: 10px;">
+            <button onclick="transact('IN')">Deposit</button>
+            <button onclick="transact('OUT')" class="btn-sec">Withdraw</button>
+        </div>
+
+        <div class="history-container">
+            <span class="label">Transaction History</span>
+            <div id="history_list" class="history-list">
+                </div>
+        </div>
+
+        <div class="ai-status">
+            <div class="ai-title">AI Financial Analysis</div>
+            <div class="ai-msg" id="ai_msg">Analyzing history...</div>
+        </div>
+
+        <button onclick="factoryReset()" class="btn-sec" style="border:none; color:#444; font-size:0.6rem; margin-top:20px;">Wipe All Data</button>
+    </div>
+</div>
+
+<script>
+    let db = JSON.parse(localStorage.getItem('dos_pro_v3')) || null;
+    let code = "";
+
+    function nav(p) {
+        if(p === 2) {
+            if(!document.getElementById('reg_name').value) return alert("Name Required");
+            code = Math.floor(1000 + Math.random() * 9000).toString();
+            document.getElementById('otp_code').innerText = code;
+        }
+        document.querySelectorAll('[id^="p"]').forEach(el => el.classList.add('hidden'));
+        document.getElementById('p'+p).classList.remove('hidden');
+    }
+
+    function finalize() {
+        const pin = document.getElementById('reg_pin').value;
+        if(pin.length < 4 || document.getElementById('otp_input').value !== code) return alert("Security Check Failed");
+
+        db = {
+            name: document.getElementById('reg_name').value.toUpperCase(),
+            pin: pin,
+            balance: 0,
+            history: []
+        };
+        save();
+        nav(3);
+    }
+
+    function login() {
+        const n = document.getElementById('log_name').value.toUpperCase();
+        const p = document.getElementById('log_pin').value;
+        if(db && n === db.name && p === db.pin) {
+            nav(4);
+            render();
+        } else alert("Denied");
+    }
+
+    function transact(type) {
+        const amt = parseFloat(document.getElementById('tx_amt').value);
+        if(!amt || amt <= 0) return;
+        if(type === 'OUT' && amt > db.balance) return alert("Insufficient Balance");
+
+        db.balance += (type === 'IN' ? amt : -amt);
+        db.history.unshift({
+            type: type,
+            amt: amt,
+            date: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+        });
+
+        document.getElementById('tx_amt').value = "";
+        save();
+        render();
+    }
+
+    function save() { localStorage.setItem('dos_pro_v3', JSON.stringify(db)); }
+
+    function render() {
+        document.getElementById('val_bal').innerText = db.balance.toLocaleString('en-PH', {minimumFractionDigits: 2});
+        
+        const list = document.getElementById('history_list');
+        list.innerHTML = db.history.length ? '' : '<div style="text-align:center; color:#444; font-size:0.8rem;">No activity recorded</div>';
+        
+        db.history.forEach(item => {
+            list.innerHTML += `
+                <div class="tx-card ${item.type === 'IN' ? 'tx-in' : 'tx-out'}">
+                    <div>
+                        <div style="font-weight:800">${item.type === 'IN' ? 'DEPOSIT' : 'WITHDRAWAL'}</div>
+                        <div class="tx-date">${item.date}</div>
+                    </div>
+                    <div style="font-weight:900; color:${item.type==='IN'?'#27ae60':'#fff'}">
+                        ${item.type === 'IN' ? '+' : '-'} ₱${item.amt.toLocaleString()}
+                    </div>
+                </div>
+            `;
+        });
+
+        const aiMsg = db.balance > 50000 ? "Elite Status: Consider long-term investment." : "Pro Tip: Maintain 10% emergency fund.";
+        document.getElementById('ai_msg').innerText = aiMsg;
+    }
+
+    function factoryReset() {
+        if(confirm("Confirm Factory Reset?")) {
+            localStorage.clear();
+            location.reload();
+        }
+    }
+
+    if(db) nav(3);
+</script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
